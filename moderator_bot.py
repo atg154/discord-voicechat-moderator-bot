@@ -1,32 +1,40 @@
 import asyncio
 import datetime
+import os
 import dotenv
 import discord
-from discord.ext import commands
-import os
 from openai import OpenAI
 
 dotenv.load_dotenv()
 client = OpenAI()
 TOKEN = os.getenv('BOT_TOKEN')
 TIMEOUT_DURATION = 5 # Timeout duration in seconds
-BANNED_WORDS = ['example','test'] # Put any banned words here
-connections = {}
+banned_words = []
+
+# Load the banned words from file if possible
+try:
+    with open('banned_words.txt', 'r') as file:
+        for line in file:
+            line = line.strip()
+            banned_words.append(line)
+except FileNotFoundError:
+    print("Error occured: No banned_words.txt file found")
+
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix='$', intents=intents)
+bot = discord.Bot()
 
-@bot.command()
+@bot.command(description="Start recording in current voicechat.")
 async def record(ctx):
     """Bot command to connect to begin recording."""
     voice = ctx.author.voice
 
     if not voice:
-        await ctx.send("You aren't in a voice channel!")
+        await ctx.respond("You aren't in a voice channel!")
     else:
         # Connect to the voice channel the author is in
-        if len(bot.voice_clients) == 0: 
+        if len(bot.voice_clients) == 0:
             vc = await voice.channel.connect()
         else:
             vc = bot.voice_clients[0]
@@ -44,7 +52,7 @@ async def record(ctx):
         await asyncio.sleep(5)
         asyncio.create_task(stop_recording(ctx, stop=False))
 
-async def once_done(sink: discord.sinks, channel: discord.TextChannel, guild, ctx, *args):  # Automatically passed by voice client
+async def once_done(sink: discord.sinks, channel: discord.TextChannel, guild, ctx, *args): # Automatically passed by voice client
     """Times out any user who says a banned word."""
     # Checks if bot has disconnected before continuing.
     if guild.voice_client in bot.voice_clients:
@@ -59,19 +67,19 @@ async def once_done(sink: discord.sinks, channel: discord.TextChannel, guild, ct
                 print(transcript)
             text = transcript.lower()
 
-            if any(word in text for word in BANNED_WORDS):
+            if any(word in text for word in banned_words):
                 user = await guild.fetch_member(user_id)
                 try:
                     # Timeout takes a utc datetime, so we just create an offset using a timedelta.
                     timeout = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=TIMEOUT_DURATION)
                     await user.timeout(timeout)
-                    await channel.send(f'Riposte detected: Timing out user {user.display_name} for {TIMEOUT_DURATION} seconds.', tts=True)
+                    await channel.send(f'Riposte detected: Timing out user {user.display_name} for {TIMEOUT_DURATION} seconds.')
                 except discord.Forbidden:
-                    await channel.send(f'Error: User {user.display_name} has higher permissions than bot.', tts=True)
+                    await channel.send(f'Error: User {user.display_name} has higher permissions than bot.')
         
         asyncio.create_task(record(ctx))
     else:
-        await ctx.send("bot disconnected!")
+        print("Bot not connected.")
 
 
 @bot.command()
@@ -86,6 +94,7 @@ async def stop_recording(ctx, stop=True):
         vc = bot.voice_clients[0]
         if stop:
             await vc.disconnect()
+            await ctx.respond("Bot Disconnecting!")
         else:
             vc.stop_recording() # Stops recording, and call the callback (once_done).
 
