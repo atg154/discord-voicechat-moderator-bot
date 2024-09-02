@@ -25,7 +25,7 @@ intents.message_content = True
 
 bot = discord.Bot()
 
-@bot.command(description="Start recording in current voicechat.")
+@bot.command(description="Start recording in current voice channel.")
 async def record(ctx):
     """Bot command to connect to begin recording."""
     voice = ctx.author.voice
@@ -82,7 +82,7 @@ async def once_done(sink: discord.sinks, channel: discord.TextChannel, guild, ct
         print("Bot not connected")
 
 
-@bot.command()
+@bot.command(description="Stop recording and disconnect from voice channel.")
 async def stop(ctx):
     """Disconnects from the voice channel and stops the recording process"""
     # Since the bot can't be connected to multiple voice chats at once, there will only ever be 0 or 1 connections.

@@ -42,6 +42,6 @@ It is used to connect the bot to a voice channel and start the recording. The us
 <br>
 <br>
  ```
-/stop_recording [stop]
+/stop
 ```
-Disconnects the bot from the voice channel that it is in. The stop parameter is optional and should not be used for expected functionality.
+Stops recording and disconnects the bot from the voice channel that it is in.
