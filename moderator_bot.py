@@ -37,7 +37,7 @@ async def record(ctx):
         if len(bot.voice_clients) == 0:
             vc = await voice.channel.connect()
         else:
-            vc = bot.voice_clients[0]
+            await ctx.respond("Already recording in a different channel!")
         
         #Starts the recording
         vc.start_recording(
@@ -50,7 +50,7 @@ async def record(ctx):
 
         # Stops the recording 5 seconds later to process the audio.
         await asyncio.sleep(5)
-        asyncio.create_task(stop_recording(ctx, stop=False))
+        asyncio.create_task(stop_recording())
 
 async def once_done(sink: discord.sinks, channel: discord.TextChannel, guild, ctx, *args): # Automatically passed by voice client
     """Times out any user who says a banned word."""
@@ -79,23 +79,28 @@ async def once_done(sink: discord.sinks, channel: discord.TextChannel, guild, ct
         
         asyncio.create_task(record(ctx))
     else:
-        print("Bot not connected.")
+        print("Bot not connected")
 
 
 @bot.command()
-async def stop_recording(ctx, stop=True):
-    """Stops the recording process.
-
-    If this is called by a user, it will disconnect and stop. 
-    Otherwise it will simply stop the recording, which gets restarted after the once_done.
-    """
+async def stop(ctx):
+    """Disconnects from the voice channel and stops the recording process"""
     # Since the bot can't be connected to multiple voice chats at once, there will only ever be 0 or 1 connections.
     if len(bot.voice_clients) != 0:
         vc = bot.voice_clients[0]
-        if stop:
-            await vc.disconnect()
-            await ctx.respond("Bot Disconnecting!")
-        else:
-            vc.stop_recording() # Stops recording, and call the callback (once_done).
+        await vc.disconnect()
+        await ctx.respond("Bot Disconnecting!")
+    else:
+        await ctx.respond("Bot is not in a voice channel!")
+
+
+
+async def stop_recording():
+    """Stops the recording so that the audio can be processed"""
+    if len(bot.voice_clients) != 0:
+        vc = bot.voice_clients[0]
+        vc.stop_recording() # Stops recording, and call the callback (once_done).
+    else:
+        print("Bot not connected")
 
 bot.run(TOKEN)
